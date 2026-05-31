@@ -1,0 +1,125 @@
+<!DOCTYPE html>
+<html lang="ar" dir="rtl">
+<head>
+  <meta charset="UTF-8">
+  <title>نظام حلب الشهباء - إدارة المراقبة</title>
+  <style>
+    body { background: #0f0f0f; color: #eee; font-family: sans-serif; text-align: center; padding: 20px; }
+    .card { background: #1f1f1f; padding: 25px; border-radius: 15px; display: inline-block; width: 450px; border: 2px solid #c41e3a; }
+    .timer-row { display: flex; justify-content: space-around; margin: 20px 0; }
+    .timer-value { font-size: 20px; color: #c41e3a; font-weight: bold; display: block; }
+    .btn { padding: 15px; margin: 10px; cursor: pointer; border: none; border-radius: 5px; font-weight: bold; width: 80%; }
+    .btn-start { background: #28a745; color: white; }
+    .btn-break { background: #ffc107; color: black; }
+    .btn-end { background: #dc3545; color: white; }
+  </style>
+</head>
+<body>
+
+<div class="card">
+  <h2>نظام حلب الشهباء - المراقبة</h2>
+  <div style="font-size: 30px; margin: 10px 0;" id="totalTime">00:00:00</div>
+  
+  <div class="timer-row">
+    <div class="timer-box">عمل<span class="timer-value" id="workTime">00:00:00</span></div>
+    <div class="timer-box">خمول<span class="timer-value" id="idleTime">00:00:00</span></div>
+    <div class="timer-box">استراحة<span class="timer-value" id="breakTime">00:00:00</span></div>
+  </div>
+
+  <button class="btn btn-start" id="startBtn" onclick="startShift()">بدء الشيفت</button>
+  <button class="btn btn-break" id="breakBtn" onclick="toggleBreak()" disabled>بدء/إيقاف الاستراحة</button>
+  <button class="btn btn-end" id="endBtn" onclick="endShift()" disabled>إنهاء الشيفت واستلام الراتب</button>
+  <div id="breakMsg" style="color: #ffc107; font-size: 14px; margin-top: 10px; height: 20px;"></div>
+</div>
+
+<script>
+  let totalSec = 0, workSec = 0, idleSec = 0, breakSec = 0;
+  let active = false, isBreak = false;
+  let lastAct = new Date();
+  
+  const HOUR_RATE = 23.08; 
+  const MAX_BREAK_SEC = 3600; // رصيد الاستراحة ساعة
+
+  const resetAct = () => { lastAct = new Date(); };
+  window.onmousemove = window.onkeydown = window.onclick = resetAct;
+
+  function startShift() {
+    active = true;
+    document.getElementById('startBtn').disabled = true;
+    document.getElementById('breakBtn').disabled = false;
+    document.getElementById('endBtn').disabled = false;
+    setInterval(update, 1000);
+  }
+
+  function toggleBreak() {
+    if (breakSec >= MAX_BREAK_SEC) return;
+    isBreak = !isBreak;
+    document.getElementById('breakBtn').innerText = isBreak ? "إيقاف الاستراحة" : "بدء الاستراحة";
+  }
+
+  function update() {
+    if (!active) return;
+    totalSec++;
+
+    let inactive = (new Date() - lastAct) / 1000;
+    let isIdleNow = inactive > 30;
+
+    if (isBreak) {
+      breakSec++;
+      document.getElementById('breakMsg').innerText = `في استراحة: رصيد المتبقي ${MAX_BREAK_SEC - breakSec} ثانية`;
+    } else if (isIdleNow) {
+      if (breakSec < MAX_BREAK_SEC) {
+        breakSec++;
+        document.getElementById('breakMsg').innerText = "خمول: يتم استهلاك رصيد الاستراحة!";
+      } else {
+        idleSec++;
+        document.getElementById('breakMsg').innerText = "خمول فعلي: يتم الخصم من الراتب!";
+      }
+    } else {
+      workSec++;
+      document.getElementById('breakMsg').innerText = "";
+    }
+
+    const fmt = (s) => new Date(s * 1000).toISOString().substr(11, 8);
+    document.getElementById('totalTime').innerText = fmt(totalSec);
+    document.getElementById('workTime').innerText = fmt(workSec);
+    document.getElementById('idleTime').innerText = fmt(idleSec);
+    document.getElementById('breakTime').innerText = fmt(breakSec);
+    
+    if (breakSec >= MAX_BREAK_SEC) document.getElementById('breakBtn').disabled = true;
+  }
+
+  function endShift() {
+    // التحقق من اكتمال 10 ساعات (36000 ثانية)
+    const isFullShift = totalSec >= 36000; 
+    const didNotUseFullBreak = breakSec < MAX_BREAK_SEC;
+    let breakBonus = 0;
+
+    // منطق المكافأة الجديد
+    if (isFullShift && didNotUseFullBreak) {
+      const confirmNoBreak = confirm("لقد أتممت شيفت 10 ساعات ولم تستهلك استراحتك بالكامل. هل تؤكد ذلك للحصول على مكافأة ساعتين؟");
+      if (confirmNoBreak) {
+        breakBonus = 2 * HOUR_RATE;
+      }
+    } else if (!isFullShift && didNotUseFullBreak) {
+      alert("تنبيه: لم يتم احتساب مكافأة الاستراحة لأنك لم تكمل شيفت الـ 10 ساعات بالكامل.");
+    }
+    
+    const idleDeduction = (idleSec / 3600) * 2 * HOUR_RATE;
+    const gross = (workSec / 3600) * HOUR_RATE;    
+    const totalBeforeTax = gross - idleDeduction + breakBonus;
+    const netSalary = totalBeforeTax * (1 - 0.16);
+
+    alert(`--- تقرير نهاية الشيفت ---
+    ساعات العمل: ${(workSec/3600).toFixed(2)}
+    ساعات الخمول (خصم مزدوج): ${(idleSec/3600).toFixed(2)}
+    مكافأة الاستراحة: ${breakBonus.toFixed(2)} ج.م
+    الراتب الإجمالي: ${totalBeforeTax.toFixed(2)} ج.م
+    استقطاع (16% ضرائب وتأمينات): ${(totalBeforeTax * 0.16).toFixed(2)} ج.م
+    --------------------------
+    صافي الراتب المستحق: ${netSalary.toFixed(2)} ج.م`);
+    location.reload();
+  }
+</script>
+</body>
+</html>

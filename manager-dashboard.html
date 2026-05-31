@@ -1,0 +1,262 @@
+<!DOCTYPE html>
+<html lang="ar" dir="rtl">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>لوحة تحكم المدير - حلب الشهباء</title>
+  <style>
+    * { margin: 0; padding: 0; box-sizing: border-box; }
+    body { background: #0a0a0a; color: #eee; font-family: 'Segoe UI', Tahoma, Arial, sans-serif; }
+    
+    .header { 
+      background: #1a1a1a; 
+      padding: 20px 30px; 
+      display: flex; 
+      justify-content: space-between; 
+      align-items: center; 
+      border-bottom: 4px solid #c41e3a; 
+      position: sticky; 
+      top: 0; 
+      z-index: 100;
+    }
+    .logo { font-size: 26px; font-weight: bold; color: #c41e3a; }
+
+    .sidebar { 
+      width: 280px; 
+      background: #1a1a1a; 
+      position: fixed; 
+      height: 100%; 
+      padding: 25px 0; 
+      border-left: 4px solid #c41e3a; 
+    }
+    .menu-item { 
+      padding: 16px 25px; 
+      cursor: pointer; 
+      transition: 0.3s; 
+      font-size: 16px; 
+    }
+    .menu-item:hover, .menu-item.active { 
+      background: #c41e3a; 
+      color: white; 
+    }
+
+    .main-content { margin-right: 280px; padding: 35px; }
+    .card { 
+      background: #1f1f1f; 
+      border-radius: 12px; 
+      padding: 25px; 
+      margin-bottom: 25px; 
+    }
+    h2 { margin-bottom: 20px; color: #c41e3a; }
+
+    table { width: 100%; border-collapse: collapse; }
+    th, td { padding: 14px 12px; text-align: right; border-bottom: 1px solid #333; vertical-align: middle; }
+    th { background: #2a2a2a; }
+
+    .status-dot {
+      display: inline-block;
+      width: 18px; height: 18px;
+      border-radius: 50%;
+      margin-left: 10px;
+      border: 2px solid #111;
+    }
+    .green { background: #28a745; box-shadow: 0 0 10px #28a745; }
+    .yellow { background: #ffc107; box-shadow: 0 0 10px #ffc107; }
+    .red { background: #dc3545; box-shadow: 0 0 10px #dc3545; }
+    .black { background: #6c757d; box-shadow: 0 0 8px #6c757d; }
+
+    .btn { 
+      padding: 10px 18px; 
+      border: none; 
+      border-radius: 6px; 
+      cursor: pointer; 
+      font-size: 15px; 
+      margin: 5px;
+    }
+    .btn-primary { background: #c41e3a; color: white; }
+    .btn-success { background: #28a745; color: white; }
+
+    .notification-bell {
+      position: relative;
+      cursor: pointer;
+      font-size: 24px;
+    }
+    .badge {
+      position: absolute;
+      top: -8px;
+      right: -8px;
+      background: #dc3545;
+      color: white;
+      border-radius: 50%;
+      padding: 2px 6px;
+      font-size: 12px;
+    }
+
+    input.search { 
+      width: 100%; 
+      padding: 14px; 
+      margin: 15px 0; 
+      background: #2a2a2a; 
+      border: none; 
+      border-radius: 8px; 
+      color: white; 
+      font-size: 17px; 
+    }
+  </style>
+</head>
+<body>
+
+  <div class="header">
+    <div class="logo">حلب الشهباء</div>
+    <div>
+      <strong>لوحة المدير</strong> | 
+      مرحباً، محمد المدير 
+      <span class="notification-bell" onclick="showNotifications()">🛎️ <span class="badge" id="notifCount">3</span></span>
+    </div>
+    <button class="btn" style="background:#dc3545; color:white;" onclick="logout()">تسجيل خروج</button>
+  </div>
+
+  <div class="sidebar">
+    <div class="menu-item active" onclick="showSection('employees')">👥 موظفي قسمي</div>
+    <div class="menu-item" onclick="showSection('attendance')">⏰ الحضور والانصراف</div>
+    <div class="menu-item" onclick="showSection('notes')">📋 ملاحظات الموظفين</div>
+    <div class="menu-item" onclick="showSection('reports')">📊 تقاريري</div>
+  </div>
+
+  <div class="main-content">
+
+    <!-- موظفي القسم -->
+    <div id="employees" class="section">
+      <h2>👥 موظفي قسمي (مراقبة الكاميرات)</h2>
+      <button class="btn btn-primary" onclick="exportToExcel()">📥 تصدير تقرير Excel</button>
+      
+      <div class="card">
+        <table>
+          <thead>
+            <tr>
+              <th>الاسم</th>
+              <th>الكود</th>
+              <th>الحالة اللحظية</th>
+              <th>آخر تحديث</th>
+              <th>خمول اليوم</th>
+              <th>إجراء</th>
+            </tr>
+          </thead>
+          <tbody id="employeesTable"></tbody>
+        </table>
+      </div>
+    </div>
+
+    <!-- الحضور والانصراف -->
+    <div id="attendance" class="section" style="display:none">
+      <h2>⏰ الحضور والانصراف (سجل 3 أشهر)</h2>
+      <input type="text" id="searchInput" class="search" placeholder="ابحث باسم الموظف..." onkeyup="searchEmployee()">
+      <div class="card">
+        <h3 id="employeeTitle">نتائج البحث</h3>
+        <table id="attendanceTable">
+          <thead>
+            <tr>
+              <th>التاريخ</th>
+              <th>الحضور</th>
+              <th>الانصراف</th>
+              <th>مدة النشاط</th>
+              <th>مدة الخمول</th>
+            </tr>
+          </thead>
+          <tbody id="attendanceBody"></tbody>
+        </table>
+      </div>
+    </div>
+
+    <!-- ملاحظات الموظفين -->
+    <div id="notes" class="section" style="display:none">
+      <h2>📋 ملاحظات ومقترحات الموظفين</h2>
+      <div class="card">
+        <p>كل موظف يقدر يرسل ملاحظة واحدة فقط (حد أقصى 100 كلمة)</p>
+      </div>
+    </div>
+
+    <!-- تقاريري -->
+    <div id="reports" class="section" style="display:none">
+      <h2>📊 تقاريري</h2>
+      <button class="btn btn-success" onclick="uploadReport()">📤 رفع تقرير جديد</button>
+      <div class="card">
+        <p>آخر تقرير مرفوع: 28/05/2026</p>
+      </div>
+    </div>
+
+  </div>
+
+  <script>
+    let employees = [
+      { name: "علي حسن", code: "EMP-045", status: "green", lastUpdate: "منذ 5 دقائق", idleToday: "35 دقيقة" },
+      { name: "خالد عمر", code: "EMP-052", status: "yellow", lastUpdate: "منذ 42 دقيقة", idleToday: "1 ساعة 20 د" },
+      { name: "أحمد سعيد", code: "EMP-061", status: "green", lastUpdate: "منذ 12 دقيقة", idleToday: "18 دقيقة" }
+    ];
+
+    function renderEmployees() {
+      const tbody = document.getElementById('employeesTable');
+      tbody.innerHTML = '';
+      employees.forEach(emp => {
+        tbody.innerHTML += `
+          <tr>
+            <td><strong>${emp.name}</strong></td>
+            <td>${emp.code}</td>
+            <td>
+              <span class="status-dot ${emp.status}"></span>
+              ${emp.status === 'green' ? 'يعمل حالياً' : emp.status === 'yellow' ? 'خمول / استراحة' : 'غائب'}
+            </td>
+            <td>${emp.lastUpdate}</td>
+            <td>${emp.idleToday}</td>
+            <td><button class="btn btn-primary" onclick="viewEmployeeDetails('${emp.name}')">تفاصيل</button></td>
+          </tr>`;
+      });
+    }
+
+    function viewEmployeeDetails(name) {
+      alert(`تفاصيل الموظف: ${name}\n\n• سجل الحضور\n• تقييم الشهر\n• إجمالي الخمول\n• عدد أيام الإجازة`);
+    }
+
+    function exportToExcel() {
+      alert("✅ تم تصدير التقرير بنجاح إلى Excel");
+    }
+
+    function searchEmployee() {
+      const term = document.getElementById('searchInput').value.trim();
+      const tbody = document.getElementById('attendanceBody');
+      tbody.innerHTML = '';
+
+      if (term === "") return;
+
+      document.getElementById('employeeTitle').textContent = `سجل حضور: ${term}`;
+      tbody.innerHTML = `<tr><td colspan="5" style="text-align:center;">جاري تحميل سجل ${term}...</td></tr>`;
+    }
+
+    function showNotifications() {
+      alert("🛎️ تنبيهات جديدة:\n\n1. خالد عمر خامل منذ 42 دقيقة\n2. ملاحظة جديدة من علي حسن\n3. تقرير يومي جاهز للرفع");
+    }
+
+    function uploadReport() {
+      alert("✅ تم فتح نافذة رفع التقرير\n(Excel أو تقرير كتابي)");
+    }
+
+    function showSection(section) {
+      document.querySelectorAll('.section').forEach(s => s.style.display = 'none');
+      document.getElementById(section).style.display = 'block';
+    }
+
+    function logout() {
+      if (confirm("هل تريد تسجيل الخروج؟")) {
+        window.location.href = "login.html";
+      }
+    }
+
+    // تحديث تلقائي
+    setInterval(renderEmployees, 30000);
+
+    // بدء الصفحة
+    showSection('employees');
+    renderEmployees();
+  </script>
+</body>
+</html>

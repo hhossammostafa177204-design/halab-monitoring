@@ -1,0 +1,142 @@
+<!DOCTYPE html>
+<html lang="ar" dir="rtl">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>تسجيل الدخول - نظام حلب الشهباء</title>
+    
+    <script src="https://www.gstatic.com/firebasejs/10.8.0/firebase-app-compat.js"></script>
+    <script src="https://www.gstatic.com/firebasejs/10.8.0/firebase-database-compat.js"></script>
+
+    <style>
+        * { box-sizing: border-box; font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif; }
+        body {
+            background: linear-gradient(135deg, #1a1a1a 0%, #333333 100%); /* تم تعديل الألوان لتناسب هوية تطبيقك الأسود والأحمر */
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            height: 100vh;
+            margin: 0;
+        }
+        .login-card {
+            background: #ffffff;
+            padding: 40px 30px;
+            border-radius: 12px;
+            box-shadow: 0 8px 24px rgba(0,0,0,0.3);
+            width: 100%;
+            max-width: 400px;
+            text-align: center;
+            border-top: 5px solid #e74c3c; /* خط أحمر يعبر عن الهوية */
+        }
+        .login-card h2 { margin: 0 0 10px 0; color: #1a1a1a; font-size: 24px; font-weight: bold; }
+        .login-card p { margin: 0 0 30px 0; color: #666; font-size: 14px; }
+        .form-group { margin-bottom: 20px; text-align: right; }
+        .form-group label { display: block; margin-bottom: 6px; color: #333; font-weight: 600; font-size: 14px; }
+        .form-group input {
+            width: 100%;
+            padding: 12px;
+            border: 1px solid #ccc;
+            border-radius: 6px;
+            font-size: 15px;
+            text-align: center; /* لجعل الكود والباسورد في المنتصف */
+            transition: border 0.3s;
+        }
+        .form-group input:focus { border-color: #e74c3c; outline: none; }
+        .btn-login {
+            width: 100%;
+            padding: 12px;
+            background: #e74c3c;
+            color: #fff;
+            border: none;
+            border-radius: 6px;
+            font-size: 16px;
+            font-weight: bold;
+            cursor: pointer;
+            transition: background 0.3s;
+        }
+        .btn-login:hover { background: #c0392b; }
+        .error-message { color: #d9534f; font-size: 14px; margin-top: 15px; display: none; text-align: center; font-weight: bold; }
+    </style>
+</head>
+<body>
+
+    <div class="login-card">
+        <h2>نظام حلب الشهباء</h2>
+        <p>منصة مراقبة وإدارة وقت الموظفين</p>
+        
+        <div class="form-group">
+            <label for="empCode">الكود الوظيفي للموظف:</label>
+            <input type="text" id="empCode" placeholder="أدخل كودك الوظيفي (مثال: 1001)" required>
+        </div>
+        
+        <div class="form-group">
+            <label for="password">كلمة المرور:</label>
+            <input type="password" id="password" placeholder="******" required>
+        </div>
+        
+        <button class="btn-login" id="loginBtn">تسجيل الدخول</button>
+        <div class="error-message" id="errorMsg"></div>
+    </div>
+
+    <script>
+        // ⚠️ ضع هنا كود الـ Config الخاص بمشروعك من Firebase Console لتتصل بقاعدة البيانات
+        const firebaseConfig = {
+            apiKey: "YOUR_API_KEY",
+            authDomain: "YOUR_AUTH_DOMAIN",
+            databaseURL: "YOUR_DATABASE_URL",
+            projectId: "YOUR_PROJECT_ID",
+            storageBucket: "YOUR_STORAGE_BUCKET",
+            messagingSenderId: "YOUR_MESSAGING_SENDER_ID",
+            appId: "YOUR_APP_ID"
+        };
+
+        // تفعيل الـ Firebase
+        firebase.initializeApp(firebaseConfig);
+        const database = firebase.database();
+
+        // منطق زر تسجيل الدخول بالكود الوظيفي
+        document.getElementById('loginBtn').addEventListener('click', () => {
+            const empCode = document.getElementById('empCode').value.trim();
+            const password = document.getElementById('password').value.trim();
+            const errorMsg = document.getElementById('errorMsg');
+
+            errorMsg.style.display = 'none';
+
+            if (!empCode || !password) {
+                errorMsg.innerText = "برجاء إدخال الكود الوظيفي وكلمة المرور.";
+                errorMsg.style.display = 'block';
+                return;
+            }
+
+            // البحث داخل فرع الموظفين في قاعدة البيانات للتأكد من الكود والباسورد
+            database.ref('employees/' + empCode).once('value')
+                .then((snapshot) => {
+                    if (snapshot.exists()) {
+                        const empData = snapshot.val();
+                        
+                        // التحقق من صحة كلمة المرور المتواجدة في السيرفر
+                        if (empData.password === password) {
+                            // حفظ كود الموظف واسمه في المتصفح (Session/Local Storage) لكي تعرف لوحة الموظف من الذي قام بفتحها
+                            localStorage.setItem('currentEmpCode', empCode);
+                            localStorage.setItem('currentEmpName', empData.name || 'موظف');
+                            
+                            // الانتقال فوراً للوحة الموظف
+                            window.location.href = 'employee-dashboard.html';
+                        } else {
+                            errorMsg.innerText = "كلمة المرور غير صحيحة.";
+                            errorMsg.style.display = 'block';
+                        }
+                    } else {
+                        errorMsg.innerText = "هذا الكود الوظيفي غير مسجل بالنظام.";
+                        errorMsg.style.display = 'block';
+                    }
+                })
+                .catch((error) => {
+                    console.error("خطأ أثناء الاتصال بقاعدة البيانات:", error);
+                    errorMsg.innerText = "حدث خطأ في الاتصال، تأكد من إعدادات قاعدة البيانات.";
+                    errorMsg.style.display = 'block';
+                });
+        });
+    </script>
+</body>
+</html>

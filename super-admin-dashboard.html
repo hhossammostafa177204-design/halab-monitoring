@@ -1,0 +1,347 @@
+<!DOCTYPE html>
+<html lang="ar" dir="rtl">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>لوحة الإدارة العليا - حلب الشهباء</title>
+  <style>
+    * { margin: 0; padding: 0; box-sizing: border-box; }
+    body { background: #0a0a0a; color: #eee; font-family: 'Segoe UI', Tahoma, Arial, sans-serif; }
+    
+    .header { background: #1a1a1a; padding: 20px 30px; display: flex; justify-content: space-between; align-items: center; border-bottom: 4px solid #c41e3a; position: sticky; top: 0; z-index: 100; }
+    .logo { font-size: 28px; font-weight: bold; color: #c41e3a; }
+
+    .sidebar { width: 280px; background: #1a1a1a; position: fixed; height: 100%; padding: 30px 0; border-left: 4px solid #c41e3a; }
+    .menu-item { padding: 18px 30px; cursor: pointer; transition: 0.3s; font-size: 16.5px; }
+    .menu-item:hover, .menu-item.active { background: #c41e3a; color: white; }
+
+    .main-content { margin-right: 280px; padding: 40px 35px; }
+    .card { background: #1f1f1f; border-radius: 12px; padding: 25px; margin-bottom: 30px; box-shadow: 0 4px 15px rgba(0,0,0,0.3); }
+    h2 { margin-bottom: 20px; color: #c41e3a; }
+
+    table { width: 100%; border-collapse: collapse; margin-top: 10px; }
+    th, td { padding: 14px 12px; text-align: right; border-bottom: 1px solid #333; }
+    th { background: #2a2a2a; }
+
+    .btn { padding: 10px 20px; border: none; border-radius: 6px; cursor: pointer; font-size: 15px; margin-left: 8px; }
+    .btn-primary { background: #c41e3a; color: white; }
+    .btn-success { background: #28a745; color: white; }
+    .btn-danger { background: #dc3545; color: white; }
+
+    .modal { display: none; position: fixed; top: 0; left: 0; width: 100%; height: 100%; background: rgba(0,0,0,0.85); z-index: 1000; align-items: center; justify-content: center; }
+    .modal-content { background: #1f1f1f; padding: 30px; border-radius: 12px; width: 580px; max-height: 92vh; overflow-y: auto; }
+    .modal-content input, .modal-content select, .modal-content textarea { width: 100%; padding: 12px; margin: 10px 0; background: #2a2a2a; border: none; border-radius: 6px; color: white; }
+    label { display: block; margin: 8px 0 4px; color: #ccc; }
+  </style>
+</head>
+<body>
+
+  <div class="header">
+    <div class="logo">حلب الشهباء</div>
+    <div><strong>الإدارة العليا</strong> | مرحباً، أحمد المدير العام</div>
+    <button class="btn btn-danger" onclick="logout()">تسجيل خروج</button>
+  </div>
+
+  <div class="sidebar">
+    <div class="menu-item active" onclick="showSection('departments')">📂 إدارة الإدارات</div>
+    <div class="menu-item" onclick="showSection('users')">👥 إدارة المستخدمين</div>
+    <div class="menu-item" onclick="showSection('notes')">📋 سجل الملاحظات</div>
+    <div class="menu-item" onclick="showSection('reports')">📊 التقارير والتقييم</div>
+    <div class="menu-item" onclick="showSection('payroll')">💰 إدارة الرواتب</div>
+  </div>
+
+  <div class="main-content">
+
+    <div id="departments" class="section">
+      <h2>إدارة الإدارات والأقسام</h2>
+      <button class="btn btn-primary" onclick="showAddDepartmentModal()">+ إضافة إدارة جديدة</button>
+      <div class="card">
+        <table>
+          <thead>
+            <tr>
+              <th>اسم الإدارة</th>
+              <th>كود</th>
+              <th>سعر الساعة</th>
+              <th>خصم الخمول</th>
+              <th>سعر الساعة الإضافية</th>
+              <th>الحالة</th>
+              <th>إجراءات</th>
+            </tr>
+          </thead>
+          <tbody id="departmentsTable"></tbody>
+        </table>
+      </div>
+    </div>
+
+    <div id="users" class="section" style="display:none">
+      <h2>👥 إدارة المستخدمين</h2>
+      <button class="btn btn-primary" onclick="showAddUserModal()">+ إضافة مستخدم جديد</button>
+      <div class="card">
+        <table>
+          <thead>
+            <tr>
+              <th>الاسم</th>
+              <th>الكود الوظيفي</th>
+              <th>الإدارة</th>
+              <th>النوع</th>
+              <th>اسم المستخدم</th>
+              <th>الحالة</th>
+              <th>إجراءات</th>
+            </tr>
+          </thead>
+          <tbody id="usersTable"></tbody>
+        </table>
+      </div>
+    </div>
+
+    <div id="notes" class="section" style="display:none">
+      <h2>📋 سجل الملاحظات والاقتراحات</h2>
+      <p><strong>ملاحظة:</strong> كل موظف يرسل رسالة واحدة فقط (حد أقصى 100 كلمة)</p>
+      <div class="card">
+        <table>
+          <thead>
+            <tr>
+              <th>اسم الموظف</th>
+              <th>الإدارة</th>
+              <th>التاريخ</th>
+              <th>الملاحظة</th>
+              <th>الحالة</th>
+            </tr>
+          </thead>
+          <tbody id="notesTable"></tbody>
+        </table>
+      </div>
+    </div>
+
+    <div id="reports" class="section" style="display:none">
+      <h2>📊 التقارير والتقييم</h2>
+      <button class="btn btn-primary" onclick="alert('سيتم رفع تقرير Excel أو تقرير كتابي من المديرين')">رفع تقرير جديد من مدير</button>
+      
+      <div class="card">
+        <h3>نظام التقييم والحوافز (كل 3 أشهر)</h3>
+        <table>
+          <thead>
+            <tr>
+              <th>الاسم</th>
+              <th>النوع</th>
+              <th>متوسط التقييم</th>
+              <th>إجمالي النجوم (3 أشهر)</th>
+              <th>الحافز</th>
+              <th>إجراء</th>
+            </tr>
+          </thead>
+          <tbody id="evaluationTable"></tbody>
+        </table>
+      </div>
+    </div>
+
+    <div id="payroll" class="section" style="display:none">
+      <h2>💰 إدارة الرواتب</h2>
+      <div class="card">
+        <p>تفاصيل الرواتب والساعات والخصومات حسب كل إدارة...</p>
+      </div>
+    </div>
+
+  </div>
+
+  <div id="departmentModal" class="modal">
+    <div class="modal-content">
+      <h3>إضافة إدارة جديدة</h3>
+      <input type="text" id="deptName" placeholder="اسم الإدارة" required>
+      <input type="text" id="deptCode" placeholder="كود الإدارة" required>
+      <label>سعر الساعة</label>
+      <input type="number" id="hourlyRate" value="50" step="0.25">
+      <label>خصم ساعة الخمول</label>
+      <input type="number" id="idleDeduction" value="75" step="0.25">
+      <label>سعر الساعة الإضافية</label>
+      <input type="number" id="overtimeRate" value="75" step="0.25">
+      <button class="btn btn-success" onclick="saveDepartment()">حفظ</button>
+      <button class="btn btn-danger" onclick="closeModal('departmentModal')">إلغاء</button>
+    </div>
+  </div>
+
+  <div id="userModal" class="modal">
+    <div class="modal-content">
+      <h3>إضافة مستخدم جديد</h3>
+      <input type="text" id="userFullName" placeholder="اسم المستخدم الكامل">
+      <input type="text" id="userCode" placeholder="الكود الوظيفي">
+      <select id="userDepartment"><option value="">اختر الإدارة</option></select>
+      <select id="userType">
+        <option value="">نوع المستخدم</option>
+        <option value="مدير">مدير</option>
+        <option value="موظف">موظف</option>
+      </select>
+      <button class="btn btn-success" onclick="addUser()">توليد الحساب</button>
+      <button class="btn btn-danger" onclick="closeModal('userModal')">إلغاء</button>
+    </div>
+  </div>
+
+  <script src="https://www.gstatic.com/firebasejs/10.8.0/firebase-app-compat.js"></script>
+  <script src="https://www.gstatic.com/firebasejs/10.8.0/firebase-database-compat.js"></script>
+
+  <script>
+    // ✅ تم تحديث المعطيات الحقيقية لمشروعك Halab-Monitoring هنا بنجاح بنسبة 100%
+    const firebaseConfig = {
+      apiKey: "AIzaSyDhRASnmem616rGcSiZGL9EIP-FW5WAYpE",
+      authDomain: "halab-monitoring.firebaseapp.com",
+      databaseURL: "https://halab-monitoring-default-rtdb.firebaseio.com",
+      projectId: "halab-monitoring",
+      storageBucket: "halab-monitoring.firebasestorage.app",
+      messagingSenderId: "17661834989",
+      appId: "1:17661834989:web:c044dbb3e48f1b7cc7bee4",
+      measurementId: "G-1S0K2YKFEE"
+    };
+
+    // تفعيل الـ Firebase
+    firebase.initializeApp(firebaseConfig);
+    const database = firebase.database();
+
+    let departments = [];
+    let users = [];
+    let notes = [];
+    let evaluations = [
+      { name: "أحمد علي", type: "موظف", avg: "4.7", total: "14.1", reward: "شهر كامل" },
+      { name: "محمد خالد", type: "مدير", avg: "3.9", total: "11.7", reward: "نصف شهر" }
+    ];
+
+    function showSection(section) {
+      document.querySelectorAll('.section').forEach(s => s.style.display = 'none');
+      document.getElementById(section).style.display = 'block';
+
+      // عند الانتقال لإدارة المستخدمين قم بتحديث الجدول من قاعدة البيانات فوراً
+      if (section === 'users') {
+        loadUsersFromFirebase();
+      }
+    }
+
+    function showAddDepartmentModal() {
+      document.getElementById('departmentModal').style.display = 'flex';
+    }
+
+    function saveDepartment() {
+      const name = document.getElementById('deptName').value;
+      if (name) {
+        departments.push({name});
+        alert(`تم إضافة الإدارة: ${name}`);
+        closeModal('departmentModal');
+      }
+    }
+
+    function showAddUserModal() {
+      document.getElementById('userModal').style.display = 'flex';
+    }
+
+    // 🧠 دالة الذكاء البرمجي لتوليد كلمة مرور عشوائية قوية وصعبة التخمين
+    function generateSecurePassword() {
+      const length = 10;
+      const charset = "abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789!@#$%^&*";
+      let password = "Hlb@"; // بادئة مميزة تعبر عن نظام حلب الشهباء للحماية
+      for (let i = 0, n = charset.length; i < length - 4; ++i) {
+        password += charset.charAt(Math.floor(Math.random() * n));
+      }
+      return password;
+    }
+
+    // 👥 دالة توليد الحساب الذكي وحفظه أونلاين تلقائياً دون تخريب الهوية
+    function addUser() {
+      const name = document.getElementById('userFullName').value.trim();
+      const code = document.getElementById('userCode').value.trim();
+      const department = document.getElementById('userDepartment').value;
+      const type = document.getElementById('userType').value;
+
+      if (!name || !code || !type) {
+        alert("برجاء ملء كافة الحقول (الاسم، الكود، والنوع) أولاً.");
+        return;
+      }
+
+      // 1. توليد الباسورد تلقائياً بالـ AI البرمجي
+      const generatedPassword = generateSecurePassword();
+
+      // 2. تجهيز بناء كائن البيانات متوافق تماماً مع شاشة تسجيل الدخول
+      const userData = {
+        name: name,
+        code: code,
+        department: department || 'عام',
+        role: type,
+        password: generatedPassword, 
+        status: "نشط"
+      };
+
+      // 3. الحفظ الفوري في فرع السيرفر باستخدام كود الموظف
+      database.ref('employees/' + code).set(userData)
+        .then(() => {
+          alert(`🎉 تم توليد حساب الموظف بنجاح وحفظه أونلاين!\n\n` +
+                `👤 الاسم: ${name}\n` +
+                `🆔 الكود الوظيفي: ${code}\n` +
+                `🔑 كلمة المرور (المولدة تلقائياً): ${generatedPassword}\n\n` +
+                `👉 يمكن للموظف استخدام هذا الكود والباسورد لتسجيل الدخول فوراً.`);
+          
+          // إعادة تصفير المدخلات
+          document.getElementById('userFullName').value = '';
+          document.getElementById('userCode').value = '';
+          document.getElementById('userDepartment').value = '';
+          document.getElementById('userType').value = '';
+          closeModal('userModal');
+          
+          // إعادة جلب البيانات الحية لتحديث الجدول
+          loadUsersFromFirebase();
+        })
+        .catch((error) => {
+          console.error("خطأ أثناء الاتصال بـ Firebase:", error);
+          alert("حدث خطأ، تأكد من إعدادات الـ Config وقواعد الحماية في السيرفر.");
+        });
+    }
+
+    // 📥 دالة جلب وعرض المستخدمين حياً من قاعدة البيانات داخل الجدول الحقيقي
+    function loadUsersFromFirebase() {
+      database.ref('employees').once('value')
+        .then((snapshot) => {
+          const tbody = document.getElementById('usersTable');
+          if (!tbody) return;
+          tbody.innerHTML = "";
+          
+          if (snapshot.exists()) {
+            snapshot.forEach((childSnapshot) => {
+              const user = childSnapshot.val();
+              const tr = document.createElement('tr');
+              tr.innerHTML = `
+                <td>${user.name}</td>
+                <td>${childSnapshot.key}</td>
+                <td>${user.department || 'عام'}</td>
+                <td>${user.role}</td>
+                <td>${childSnapshot.key}</td>
+                <td style="color: #28a745">${user.status || 'نشط'}</td>
+                <td><button class="btn btn-danger" onclick="deleteUser('${childSnapshot.key}')">حذف</button></td>
+              `;
+              tbody.appendChild(tr);
+            });
+          }
+        })
+        .catch((error) => {
+          console.error("خطأ في جلب الموظفين:", error);
+        });
+    }
+
+    // 🗑️ دالة حذف مستخدم من قاعدة البيانات مباشرة
+    function deleteUser(code) {
+      if (confirm(`هل أنت متأكد من حذف الموظف صاحب الكود: ${code} نهائياً؟`)) {
+        database.ref('employees/' + code).remove()
+          .then(() => {
+            loadUsersFromFirebase();
+          });
+      }
+    }
+
+    function closeModal(modalId) {
+      document.getElementById(modalId).style.display = 'none';
+    }
+
+    function logout() {
+      if (confirm("تسجيل خروج؟")) window.location.href = "index.html";
+    }
+
+    // بدء الصفحة الافتراضية لقسم الإدارات
+    showSection('departments');
+  </script>
+</body>
+</html>
